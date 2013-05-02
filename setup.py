@@ -10,14 +10,24 @@ except:
 
 VERSION = '0.1'
 
+README = open('README.rst').read()
+
 setup(
     name='mach',
     description='CLI frontend to mozilla-central.',
+    long_description=README,
     license='MPL 2.0',
     author='Gregory Szorc',
     author_email='gregory.szorc@gmail.com',
+    url='https://github.com/indygreg/mach',
     packages=['mach'],
     version=VERSION,
+    classifiers=[
+        'Environment :: Console',
+        'Development Status :: 3 - Alpha',
+        'License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)',
+        'Natural Language :: English',
+    ],
     install_requires=['mozprocess', 'blessings'],
 )
 
