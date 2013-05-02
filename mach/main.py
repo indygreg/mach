@@ -183,6 +183,15 @@ To see more help for a specific command, run:
         self.settings = ConfigSettings()
 
         self.log_manager.register_structured_logger(self.logger)
+        self.global_arguments = []
+
+    def add_global_argument(self, *args, **kwargs):
+        """Register a global argument with the argument parser.
+
+        Arguments are proxied to ArgumentParser.add_argument()
+        """
+
+        self.global_arguments.append((args, kwargs))
 
     def load_commands_from_directory(self, path):
         """Scan for mach commands from modules in a directory.
@@ -332,7 +341,7 @@ To see more help for a specific command, run:
 
         context = CommandContext(topdir=self.cwd, cwd=self.cwd,
             settings=self.settings, log_manager=self.log_manager,
-            commands=Registrar)
+            commands=Registrar, **vars(args))
 
         handler = getattr(args, 'mach_handler')
         cls = handler.cls
@@ -485,6 +494,9 @@ To see more help for a specific command, run:
             help='Prefix log line with interval from last message rather '
                 'than relative time. Note that this is NOT execution time '
                 'if there are parallel operations.')
+
+        for args, kwargs in self.global_arguments:
+            global_group.add_argument(*args, **kwargs)
 
         # We need to be last because CommandAction swallows all remaining
         # arguments and argparse parses arguments in the order they were added.

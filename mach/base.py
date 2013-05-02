@@ -4,11 +4,18 @@
 
 from __future__ import unicode_literals
 
-from collections import namedtuple
 
-# Holds mach run-time state so it can easily be passed to command providers.
-CommandContext = namedtuple('CommandContext', ['topdir', 'cwd',
-    'settings', 'log_manager', 'commands'])
+class CommandContext(object):
+    """Holds run-time state for passing to commands."""
+    def __init__(self, topdir, cwd, settings, log_manager, commands, **kwargs):
+        self.topdir = topdir
+        self.cwd = cwd
+        self.settings = settings
+        self.log_manager = log_manager
+        self.commands = commands
+
+        for k, v in kwargs.items():
+            setattr(self, k, v)
 
 
 class MachError(Exception):
