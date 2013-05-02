@@ -14,7 +14,7 @@ README = open('README.rst').read()
 
 setup(
     name='mach',
-    description='CLI frontend to mozilla-central.',
+    description='Generic command line command dispatching framework.',
     long_description=README,
     license='MPL 2.0',
     author='Gregory Szorc',
