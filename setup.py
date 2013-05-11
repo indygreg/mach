@@ -28,6 +28,10 @@ setup(
         'License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)',
         'Natural Language :: English',
     ],
-    install_requires=['mozprocess', 'blessings'],
+    install_requires=[
+        'blessings',
+        'mozfile',
+        'mozprocess',
+    ],
 )
 

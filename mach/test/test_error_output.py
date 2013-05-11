@@ -15,13 +15,12 @@ import mach.main
 
 
 class TestErrorOutput(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        common_path = os.path.join(os.path.dirname(__file__), 'common.py')
-        imp.load_source('mach.commands.error_output_test', common_path)
-
     def _run_mach(self, args):
         m = mach.main.Mach(os.getcwd())
+        m.define_category('test', 'test', 'test commands')
+        common_path = os.path.join(os.path.dirname(__file__), 'common.py')
+        m.load_commands_from_file(common_path,
+            'mach.commands.error_output_test')
 
         stdout = StringIO()
         stderr = StringIO()
