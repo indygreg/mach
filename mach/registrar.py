@@ -4,6 +4,8 @@
 
 from __future__ import unicode_literals
 
+from StringIO import StringIO
+
 from .base import MachError
 
 
@@ -13,8 +15,8 @@ class MachRegistrar(object):
     def __init__(self):
         self.command_handlers = {}
         self.commands_by_category = {}
-        self.settings_providers = set()
         self.categories = {}
+        self.settings_sections = {}
 
     def register_command_handler(self, handler):
         name = handler.name
@@ -30,12 +32,21 @@ class MachRegistrar(object):
         self.command_handlers[name] = handler
         self.commands_by_category[handler.category].add(name)
 
-    def register_settings_provider(self, cls):
-        self.settings_providers.add(cls)
-
     def register_category(self, name, title, description, priority=50):
         self.categories[name] = (title, description, priority)
         self.commands_by_category[name] = set()
+
+    def register_setting(self, section, option):
+        self.settings_sections.setdefault(section, []).append(option)
+
+    def configspec(self):
+        """Obtain a ConfigObj config spec for registered settings."""
+        s = StringIO()
+        for section, options in self.settings_sections.items():
+            s.write('[%s]\n' % section)
+            s.writelines(options)
+
+        return s
 
 
 Registrar = MachRegistrar()

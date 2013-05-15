@@ -17,6 +17,10 @@ import traceback
 import uuid
 import sys
 
+import configobj
+
+from validate import Validator
+
 from .base import (
     CommandContext,
     MachError,
@@ -27,11 +31,9 @@ from .base import (
 
 from .decorators import (
     CommandArgument,
-    CommandProvider,
     Command,
 )
 
-from .config import ConfigSettings
 from .dispatcher import CommandAction
 from .logging import LoggingManager
 from .registrar import Registrar
@@ -116,6 +118,17 @@ The %s command does not accept the arguments: %s
 '''.lstrip()
 
 
+class DefaultSettingsFileResolver(object):
+    def __init__(self, environment_variable=None, global_argument=None,
+        global_filenames=[]):
+        self.env = environment_variable
+        self.arg = global_argument
+        self.defaults = global_filenames
+
+    def __call__(self, mach, args):
+        pass
+
+
 class ArgumentParser(argparse.ArgumentParser):
     """Custom implementation argument parser to make things look pretty."""
 
@@ -153,7 +166,6 @@ class ArgumentParser(argparse.ArgumentParser):
         return text
 
 
-@CommandProvider
 class Mach(object):
     """Contains code for the command-line `mach` interface."""
 
@@ -174,13 +186,26 @@ To see more help for a specific command, run:
   %(prog)s help <command>
 """
 
-    def __init__(self, cwd):
+    def __init__(self, cwd, resolve_settings_fn=None):
+        """Initialize a driver instance.
+
+        cwd is the directory where the mach driver should be rooted. It may or
+        may not be the directory where the driver script is actually located.
+        This path is used to locate default settings files.
+
+        :resolve_settings_files is a callable that will be invoked after
+        argument parsing but before command dispatch which can be used to
+        resolve the list of applicable settings files. The callable is passed
+        this class instance and the parsed arguments object. It should return
+        an iterable of paths to settings files.
+        """
         assert os.path.isdir(cwd)
 
         self.cwd = cwd
+        self.resolve_settings_fn = resolve_settings_fn
         self.log_manager = LoggingManager()
         self.logger = logging.getLogger(__name__)
-        self.settings = ConfigSettings()
+        self.settings = None
 
         self.log_manager.register_structured_logger(self.logger)
         self.global_arguments = []
@@ -435,40 +460,34 @@ To see more help for a specific command, run:
     def load_settings(self, args):
         """Determine which settings files apply and load them.
 
-        Currently, we only support loading settings from a single file.
-        Ideally, we support loading from multiple files. This is supported by
-        the ConfigSettings API. However, that API currently doesn't track where
-        individual values come from, so if we load from multiple sources then
-        save, we effectively do a full copy. We don't want this. Until
-        ConfigSettings does the right thing, we shouldn't expose multi-file
-        loading.
-
         We look for a settings file in the following locations. The first one
         found wins:
 
           1) Command line argument
           2) Environment variable
-          3) Default path
+          3) Default path(s)
         """
-        # Settings are disabled until integration with command providers is
-        # worked out.
-        self.settings = None
-        return False
+        env_var = self.settings_environment_variable
 
-        for provider in Registrar.settings_providers:
-            provider.register_settings()
-            self.settings.register_provider(provider)
-
-        p = os.path.join(self.cwd, 'mach.ini')
-
+        p = None
         if args.settings_file:
             p = args.settings_file
-        elif 'MACH_SETTINGS_FILE' in os.environ:
-            p = os.environ['MACH_SETTINGS_FILE']
+        elif env_var and env_var in os.environ:
+            p = os.environ[env_var]
 
-        self.settings.load_file(p)
+        configspec = configobj.ConfigObj(Registrar.configspec(),
+            encoding='UTF8', list_values=False, interpolation=False)
 
-        return os.path.exists(p)
+        config = configobj.ConfigObj(infile=p, configspec=configspec,
+            interpolation=False)
+
+        validator = Validator()
+        result = config.validate(validator, preserve_errors=True)
+
+        for sections, name in configobj.get_extra_values(config):
+            import pdb; pdb.set_trace()
+
+        self.settings = config
 
     def get_argument_parser(self):
         """Returns an argument parser for the command-line interface."""
@@ -480,8 +499,8 @@ To see more help for a specific command, run:
         # help messages are printed.
         global_group = parser.add_argument_group('Global Arguments')
 
-        #global_group.add_argument('--settings', dest='settings_file',
-        #    metavar='FILENAME', help='Path to settings file.')
+        global_group.add_argument('--settings', dest='settings_file',
+            metavar='FILENAME', help='Path to settings file.')
 
         global_group.add_argument('-v', '--verbose', dest='verbose',
             action='store_true', default=False,

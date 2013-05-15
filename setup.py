@@ -30,6 +30,7 @@ setup(
     ],
     install_requires=[
         'blessings',
+        'configobj',
         'mozfile',
         'mozprocess',
     ],

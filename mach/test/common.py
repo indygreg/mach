@@ -10,12 +10,15 @@ from mach.decorators import (
     CommandArgument,
     CommandProvider,
     Command,
+    Setting,
 )
 
 import mach.test.common2 as common2
 
 
 @CommandProvider
+@Setting('test', 'int = integer(0, 10)')
+@Setting('test', 'user = string()')
 class TestCommandProvider(object):
     @Command('throw', category='test')
     @CommandArgument('--message', '-m', default='General Error')
@@ -27,3 +30,6 @@ class TestCommandProvider(object):
     def throw_deep(self, message):
         common2.throw_deep(message)
 
+    @Command('simple', category='test')
+    def simple(self):
+        print('Executed simple.')
